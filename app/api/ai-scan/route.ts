@@ -33,9 +33,13 @@ const SYSTEM_PROMPT = `Sen bir veri anonimleştirme uzmanısın. Görevin, bir E
 
 ## Karar Verme Stratejisi
 1. Önce sütun BAŞLIĞINA bak — "Ad Soyad", "İsim", "Yetkili", "Firma", "Şirket" gibi başlıklar güçlü ipucudur
-2. Sonra ÖRNEK DEĞERLERİ incele — çoğunluk bir kalıba uyuyorsa o tipe ata
-3. Emin değilsen confidence: "low" ver ve type: "OTHER" yap — yanlış pozitiften kaçın
-4. Karışık sütunlarda (hem isim hem başka veri varsa) type: "OTHER" ver
+2. Başlık boşsa veya yoksa, YALNIZCA örnek değerlere göre karar ver
+3. Sonra ÖRNEK DEĞERLERİ incele — çoğunluk bir kalıba uyuyorsa o tipe ata
+4. **BİTİŞİK SÜTUNLAR önemlidir:** Türk Excel dosyalarında ad ve soyad genellikle YAN YANA iki sütunda tutulur. Bir sütun kişi adı gibi görünüyorsa, hemen yanındaki sütun da büyük olasılıkla kişi adıdır (biri ad, diğeri soyad). Her iki sütunu da PERSON olarak işaretle.
+5. Kısa, tek kelimelik metinler içeren sütunlar (sayı veya tarih olmayan) potansiyel isim sütunlarıdır — özellikle yanlarındaki sütun zaten PERSON ise
+6. Alışılmadık veya tanımadığın kelimeler de isim olabilir — Türkçe'de çok çeşitli isimler vardır. Bir kelimenin sözlük anlamı olması onu isim olmaktan çıkarmaz (örn: "Deniz", "Çağla", "Işık", "Bulut" hepsi gerçek isimlerdir)
+7. Emin değilsen ama sütundaki değerler kısa metin (1-3 kelime) ve sayı/tarih değilse, PERSON olarak işaretle ve confidence: "medium" ver
+8. Karışık sütunlarda (hem isim hem tamamen farklı veri türü varsa) type: "OTHER" ver
 
 ## Çıktı Formatı
 Yalnızca geçerli JSON döndür. Markdown kullanma, açıklama yazma, hiçbir ek metin ekleme.
