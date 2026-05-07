@@ -33,7 +33,7 @@ export function buildMapping(
 
   for (const [sheetName, rows] of Object.entries(sheetData)) {
     const colConfig = columnConfig[sheetName] ?? {}
-    for (let rIdx = 1; rIdx < rows.length; rIdx++) {
+    for (let rIdx = 0; rIdx < rows.length; rIdx++) {
       const row = rows[rIdx]
       for (const [colIdxStr, colType] of Object.entries(colConfig)) {
         if (colType === 'none') continue

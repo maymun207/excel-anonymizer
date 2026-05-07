@@ -80,21 +80,32 @@ export default function Home() {
     setAiLoading(true)
     try {
       const rows = sheetData[activeSheet]
-      const headers = (rows[0] ?? []).map(h => (h === null || h === undefined ? '' : String(h)))
-      const dataRows = rows.slice(1, 11)
 
-      const columns: AiScanRequest['columns'] = headers
-        .map((header, idx) => {
-          const samples = dataRows
-            .map(row => {
-              const val = row[idx]
-              return val === null || val === undefined ? '' : String(val).trim()
-            })
-            .filter(v => v !== '')
-            .slice(0, 5)
-          return { index: idx, header, samples }
-        })
-        .filter(c => c.samples.length > 0)
+      // Find the maximum column count across all rows
+      const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0)
+
+      // Find the first non-empty row to use as a potential header
+      const firstDataRowIdx = rows.findIndex(row =>
+        row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''),
+      )
+      const headerRow = firstDataRowIdx >= 0 ? rows[firstDataRowIdx] : []
+      const headers = Array.from({ length: maxCols }, (_, i) => {
+        const h = headerRow[i]
+        return h === null || h === undefined ? '' : String(h).trim()
+      })
+
+      // Collect samples from ALL rows (skip the header row itself)
+      const columns: AiScanRequest['columns'] = Array.from({ length: maxCols }, (_, idx) => {
+        const samples: string[] = []
+        for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+          if (rIdx === firstDataRowIdx) continue // skip header
+          const val = rows[rIdx]?.[idx]
+          const str = val === null || val === undefined ? '' : String(val).trim()
+          if (str !== '' && !samples.includes(str)) samples.push(str)
+          if (samples.length >= 10) break
+        }
+        return { index: idx, header: headers[idx] ?? '', samples }
+      }).filter(c => c.samples.length > 0)
 
       const res = await fetch('/api/ai-scan', {
         method: 'POST',
