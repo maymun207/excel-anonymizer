@@ -343,6 +343,15 @@ export default function Home() {
                     <span className="text-zinc-500">{sheetNames.length} sayfa</span>
                   </div>
                   <div className="flex gap-2">
+                    {sheetNames.length > 1 && (
+                      <button
+                        onClick={handleAiScanAll}
+                        disabled={aiLoading || aiAllLoading}
+                        className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
+                      >
+                        {aiAllLoading ? `⏳ ${aiAllProgress}` : '🚀 AI Tüm Tablar'}
+                      </button>
+                    )}
                     <button
                       onClick={handleAiScan}
                       disabled={aiLoading || aiAllLoading}
@@ -350,15 +359,6 @@ export default function Home() {
                     >
                       {aiLoading ? '⏳ Tarıyor...' : '✨ AI ile Tara'}
                     </button>
-                    {sheetNames.length > 1 && (
-                      <button
-                        onClick={handleAiScanAll}
-                        disabled={aiLoading || aiAllLoading}
-                        className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
-                      >
-                        {aiAllLoading ? `⏳ ${aiAllProgress}` : '🚀 AI All Tabs'}
-                      </button>
-                    )}
                     <button
                       onClick={handleAnonymize}
                       disabled={taggedCount === 0 || processing}
