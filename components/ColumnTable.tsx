@@ -17,15 +17,15 @@ const typeLabel: Record<ColumnType, string> = {
 }
 
 const typeBg: Record<ColumnType, string> = {
-  none: 'bg-gray-100 text-gray-600',
-  PERSON: 'bg-blue-100 text-blue-700',
-  ORG: 'bg-orange-100 text-orange-700',
+  none: 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700',
+  PERSON: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30',
+  ORG: 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30',
 }
 
 const cellTint: Record<ColumnType, string> = {
-  none: '',
-  PERSON: 'bg-blue-50 text-blue-800',
-  ORG: 'bg-orange-50 text-orange-800',
+  none: 'text-zinc-300',
+  PERSON: 'bg-blue-500/10 text-blue-300',
+  ORG: 'bg-orange-500/10 text-orange-300',
 }
 
 export default function ColumnTable({
@@ -36,25 +36,27 @@ export default function ColumnTable({
   aiSuggested = [],
 }: ColumnTableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-xl border border-zinc-800">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="bg-gray-50">
+          <tr className="bg-zinc-900 border-b border-zinc-800">
             {headers.map((header, idx) => {
               const colType = columnConfig[idx] ?? 'none'
               return (
-                <th key={idx} className="px-3 py-2 text-left font-medium text-gray-700 whitespace-nowrap border-b border-gray-200">
-                  <div className="flex flex-col gap-1">
-                    <span className="truncate max-w-[120px]" title={header}>{header || `Kolon ${idx + 1}`}</span>
+                <th key={idx} className="px-3 py-2.5 text-left font-medium text-zinc-400 whitespace-nowrap">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="truncate max-w-[120px] text-zinc-300" title={header}>
+                      {header || `Kolon ${idx + 1}`}
+                    </span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onToggle(idx)}
-                        className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${typeBg[colType]}`}
+                        className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${typeBg[colType]}`}
                       >
                         {typeLabel[colType]}
                       </button>
                       {aiSuggested.includes(idx) && (
-                        <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700">AI</span>
+                        <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-400">AI</span>
                       )}
                     </div>
                   </div>
@@ -63,9 +65,9 @@ export default function ColumnTable({
             })}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-zinc-800/60">
           {previewRows.map((row, rIdx) => (
-            <tr key={rIdx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+            <tr key={rIdx} className="hover:bg-zinc-800/30 transition-colors">
               {headers.map((_, cIdx) => {
                 const colType = columnConfig[cIdx] ?? 'none'
                 const cellVal = row[cIdx]
@@ -73,7 +75,7 @@ export default function ColumnTable({
                 return (
                   <td
                     key={cIdx}
-                    className={`px-3 py-2 whitespace-nowrap max-w-[150px] truncate ${cellTint[colType]}`}
+                    className={`px-3 py-2 whitespace-nowrap max-w-[150px] truncate text-sm ${cellTint[colType]}`}
                     title={display}
                   >
                     {display}
@@ -84,7 +86,7 @@ export default function ColumnTable({
           ))}
           {previewRows.length === 0 && (
             <tr>
-              <td colSpan={headers.length} className="px-3 py-4 text-center text-gray-400">
+              <td colSpan={headers.length} className="px-3 py-6 text-center text-zinc-600">
                 Önizleme için veri yok
               </td>
             </tr>

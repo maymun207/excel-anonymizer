@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
 Sütunlar:
 ${columnsText}
 
-Sadece JSON döndür, başka hiçbir şey yazma:
-{"columns":[{"index":0,"type":"PERSON veya ORG veya OTHER","confidence":"high veya medium veya low"}]}`
+SADECE ham JSON döndür. Markdown kod bloğu kullanma, açıklama yazma, başka hiçbir şey ekleme.
+Örnek format: {"columns":[{"index":0,"type":"PERSON","confidence":"high"}]}`
 
   try {
     const client = new Anthropic({ apiKey })
@@ -44,8 +44,14 @@ Sadece JSON döndür, başka hiçbir şey yazma:
       return NextResponse.json({ error: 'Model yanıt vermedi' }, { status: 500 })
     }
 
-    const raw = textContent.text.trim()
-    const parsed: AiScanResponse = JSON.parse(raw)
+    // Strip markdown code fences if Claude wraps the response (e.g. ```json ... ```)
+    const stripped = textContent.text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim()
+
+    const parsed: AiScanResponse = JSON.parse(stripped)
     return NextResponse.json(parsed)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Bilinmeyen hata'
