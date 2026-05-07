@@ -81,6 +81,24 @@ function patchXml(
   return xml
 }
 
+/**
+ * Collect all XML file paths under xl/ that may contain cell text.
+ * This covers sharedStrings, all worksheets (including non-standard names),
+ * chartsheets, and any other XML that might embed text.
+ */
+function collectPatchableXmlPaths(zip: JSZip): string[] {
+  const paths: string[] = []
+  zip.forEach((relativePath: string) => {
+    if (relativePath.startsWith('xl/') && relativePath.endsWith('.xml')) {
+      // Skip styles and theme — they never contain user text
+      if (relativePath === 'xl/styles.xml') return
+      if (relativePath.startsWith('xl/theme/')) return
+      paths.push(relativePath)
+    }
+  })
+  return paths
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -88,9 +106,9 @@ function patchXml(
 /**
  * Anonymize an xlsx buffer at the ZIP level.
  *
- * ONLY xl/sharedStrings.xml (and inline strings in sheet XMLs) are modified.
- * xl/styles.xml, xl/theme/*, xl/worksheets/sheet*.xml (formatting attributes),
- * drawings, images — everything else is untouched bit-for-bit.
+ * ONLY <t>...</t> text nodes inside xl/*.xml files are modified.
+ * xl/styles.xml, xl/theme/*, drawings, images — everything else is
+ * untouched bit-for-bit.
  */
 export async function anonymizeBuffer(
   originalBuffer: ArrayBuffer,
@@ -107,19 +125,9 @@ export async function anonymizeBuffer(
 
   const zip = await JSZip.loadAsync(originalBuffer)
 
-  // 1. Patch shared strings (the primary string store in xlsx)
-  const ssFile = zip.file('xl/sharedStrings.xml')
-  if (ssFile) {
-    const xml = await ssFile.async('text')
-    zip.file('xl/sharedStrings.xml', patchXml(xml, entries))
-  }
-
-  // 2. Patch inline strings in each sheet XML (rare, but cover it)
-  const sheetPaths: string[] = []
-  zip.forEach((rel: string) => {
-    if (/^xl\/worksheets\/sheet\d+\.xml$/.test(rel)) sheetPaths.push(rel)
-  })
-  for (const path of sheetPaths) {
+  // Patch every XML under xl/ that could contain cell text
+  const xmlPaths = collectPatchableXmlPaths(zip)
+  for (const path of xmlPaths) {
     const f = zip.file(path)
     if (!f) continue
     const xml = await f.async('text')
@@ -138,6 +146,7 @@ export async function anonymizeBuffer(
 
 /**
  * De-anonymize an xlsx buffer at the ZIP level (reverse mapping).
+ * Patches ALL xml files under xl/ to ensure every tab is restored.
  */
 export async function deanonymizeBuffer(
   anonymizedBuffer: ArrayBuffer,
@@ -149,17 +158,9 @@ export async function deanonymizeBuffer(
 
   const zip = await JSZip.loadAsync(anonymizedBuffer)
 
-  const ssFile = zip.file('xl/sharedStrings.xml')
-  if (ssFile) {
-    const xml = await ssFile.async('text')
-    zip.file('xl/sharedStrings.xml', patchXml(xml, entries))
-  }
-
-  const sheetPaths: string[] = []
-  zip.forEach((rel: string) => {
-    if (/^xl\/worksheets\/sheet\d+\.xml$/.test(rel)) sheetPaths.push(rel)
-  })
-  for (const path of sheetPaths) {
+  // Patch every XML under xl/ that could contain cell text
+  const xmlPaths = collectPatchableXmlPaths(zip)
+  for (const path of xmlPaths) {
     const f = zip.file(path)
     if (!f) continue
     const xml = await f.async('text')
