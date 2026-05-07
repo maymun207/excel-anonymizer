@@ -34,6 +34,8 @@ export default function Home() {
   const [columnConfig, setColumnConfig] = useState<SheetColumnConfig>({})
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiAllLoading, setAiAllLoading] = useState(false)
+  const [aiAllProgress, setAiAllProgress] = useState('')
   const [aiSuggested, setAiSuggested] = useState<Record<string, number[]>>({})
   const [processing, setProcessing] = useState(false)
 
@@ -75,73 +77,100 @@ export default function Home() {
     setStep('configure')
   }, [])
 
+  // Shared helper: scan a single sheet and return AI results
+  const scanSheet = useCallback(async (sheetName: string): Promise<{ suggested: number[]; data: AiScanResponse } | null> => {
+    const rows = sheetData[sheetName]
+    if (!rows || rows.length === 0) return null
+
+    const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0)
+    if (maxCols === 0) return null
+
+    const firstDataRowIdx = rows.findIndex(row =>
+      row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''),
+    )
+    const headerRow = firstDataRowIdx >= 0 ? rows[firstDataRowIdx] : []
+    const headers = Array.from({ length: maxCols }, (_, i) => {
+      const h = headerRow[i]
+      return h === null || h === undefined ? '' : String(h).trim()
+    })
+
+    const columns: AiScanRequest['columns'] = Array.from({ length: maxCols }, (_, idx) => {
+      const samples: string[] = []
+      for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+        if (rIdx === firstDataRowIdx) continue
+        const val = rows[rIdx]?.[idx]
+        const str = val === null || val === undefined ? '' : String(val).trim()
+        if (str !== '' && !samples.includes(str)) samples.push(str)
+        if (samples.length >= 10) break
+      }
+      return { index: idx, header: headers[idx] ?? '', samples }
+    }).filter(c => c.samples.length > 0)
+
+    if (columns.length === 0) return null
+
+    const res = await fetch('/api/ai-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sheetName, columns } satisfies AiScanRequest),
+    })
+
+    if (!res.ok) {
+      const err = await res.json() as { error?: string }
+      throw new Error(err.error ?? `AI tarama başarısız (${sheetName})`)
+    }
+
+    const data: AiScanResponse = await res.json() as AiScanResponse
+    const suggested: number[] = []
+
+    setColumnConfig(prev => {
+      const updated = { ...prev }
+      const sheetConfig = { ...(updated[sheetName] ?? {}) }
+      for (const col of data.columns) {
+        if (col.type === 'OTHER' || col.confidence === 'low') continue
+        if (sheetConfig[col.index] && sheetConfig[col.index] !== 'none') continue
+        sheetConfig[col.index] = col.type as ColumnType
+        suggested.push(col.index)
+      }
+      updated[sheetName] = sheetConfig
+      return updated
+    })
+
+    setAiSuggested(prev => ({ ...prev, [sheetName]: suggested }))
+    return { suggested, data }
+  }, [sheetData])
+
+  // Scan only the active sheet
   const handleAiScan = useCallback(async () => {
     if (!activeSheet || !sheetData[activeSheet]) return
     setAiLoading(true)
     try {
-      const rows = sheetData[activeSheet]
-
-      // Find the maximum column count across all rows
-      const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0)
-
-      // Find the first non-empty row to use as a potential header
-      const firstDataRowIdx = rows.findIndex(row =>
-        row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''),
-      )
-      const headerRow = firstDataRowIdx >= 0 ? rows[firstDataRowIdx] : []
-      const headers = Array.from({ length: maxCols }, (_, i) => {
-        const h = headerRow[i]
-        return h === null || h === undefined ? '' : String(h).trim()
-      })
-
-      // Collect samples from ALL rows (skip the header row itself)
-      const columns: AiScanRequest['columns'] = Array.from({ length: maxCols }, (_, idx) => {
-        const samples: string[] = []
-        for (let rIdx = 0; rIdx < rows.length; rIdx++) {
-          if (rIdx === firstDataRowIdx) continue // skip header
-          const val = rows[rIdx]?.[idx]
-          const str = val === null || val === undefined ? '' : String(val).trim()
-          if (str !== '' && !samples.includes(str)) samples.push(str)
-          if (samples.length >= 10) break
-        }
-        return { index: idx, header: headers[idx] ?? '', samples }
-      }).filter(c => c.samples.length > 0)
-
-      const res = await fetch('/api/ai-scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sheetName: activeSheet, columns } satisfies AiScanRequest),
-      })
-
-      if (!res.ok) {
-        const err = await res.json() as { error?: string }
-        throw new Error(err.error ?? 'AI tarama başarısız')
-      }
-
-      const data: AiScanResponse = await res.json() as AiScanResponse
-      const suggested: number[] = []
-
-      setColumnConfig(prev => {
-        const updated = { ...prev }
-        const sheetConfig = { ...(updated[activeSheet] ?? {}) }
-        for (const col of data.columns) {
-          if (col.type === 'OTHER' || col.confidence === 'low') continue
-          if (sheetConfig[col.index] && sheetConfig[col.index] !== 'none') continue
-          sheetConfig[col.index] = col.type as ColumnType
-          suggested.push(col.index)
-        }
-        updated[activeSheet] = sheetConfig
-        return updated
-      })
-
-      setAiSuggested(prev => ({ ...prev, [activeSheet]: suggested }))
+      await scanSheet(activeSheet)
     } catch (err) {
       console.error(err)
       alert(err instanceof Error ? err.message : 'AI tarama hatası')
     } finally {
       setAiLoading(false)
     }
-  }, [activeSheet, sheetData])
+  }, [activeSheet, sheetData, scanSheet])
+
+  // Scan ALL sheets sequentially
+  const handleAiScanAll = useCallback(async () => {
+    if (sheetNames.length === 0) return
+    setAiAllLoading(true)
+    try {
+      for (let i = 0; i < sheetNames.length; i++) {
+        setAiAllProgress(`${i + 1}/${sheetNames.length}: ${sheetNames[i]}`)
+        await scanSheet(sheetNames[i])
+      }
+      setAiAllProgress('')
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : 'AI tarama hatası')
+    } finally {
+      setAiAllLoading(false)
+      setAiAllProgress('')
+    }
+  }, [sheetNames, scanSheet])
 
   const handleAnonymize = useCallback(async () => {
     if (!fileBuffer) return
@@ -316,11 +345,20 @@ export default function Home() {
                   <div className="flex gap-2">
                     <button
                       onClick={handleAiScan}
-                      disabled={aiLoading}
+                      disabled={aiLoading || aiAllLoading}
                       className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
                     >
                       {aiLoading ? '⏳ Tarıyor...' : '✨ AI ile Tara'}
                     </button>
+                    {sheetNames.length > 1 && (
+                      <button
+                        onClick={handleAiScanAll}
+                        disabled={aiLoading || aiAllLoading}
+                        className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
+                      >
+                        {aiAllLoading ? `⏳ ${aiAllProgress}` : '🚀 AI All Tabs'}
+                      </button>
+                    )}
                     <button
                       onClick={handleAnonymize}
                       disabled={taggedCount === 0 || processing}
