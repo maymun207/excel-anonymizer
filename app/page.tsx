@@ -25,7 +25,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('anon')
   const [step, setStep] = useState<Step>('upload')
 
-  // Store original file buffer so we can re-read and modify in-place
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null)
   const [filename, setFilename] = useState('')
   const [sheetData, setSheetData] = useState<Record<string, unknown[][]>>({})
@@ -39,7 +38,6 @@ export default function Home() {
   const [aiSuggested, setAiSuggested] = useState<Record<string, number[]>>({})
   const [processing, setProcessing] = useState(false)
 
-  // De-anonymize state
   const [deanonBuffer, setDeanonBuffer] = useState<ArrayBuffer | null>(null)
   const [deanonFilename, setDeanonFilename] = useState('')
   const [deanonMapData, setDeanonMapData] = useState<AnonymizationMapping | null>(null)
@@ -47,7 +45,6 @@ export default function Home() {
 
   const handleFile = useCallback(async (file: File) => {
     const buffer = await file.arrayBuffer()
-    // Read with all options to preserve as much metadata as possible
     const wb = XLSX.read(buffer, {
       type: 'array',
       cellStyles: true,
@@ -63,7 +60,7 @@ export default function Home() {
       data[sheetName] = XLSX.utils.sheet_to_json(ws, {
         header: 1,
         defval: '',
-        raw: false, // keep formatted text for preview
+        raw: false,
       }) as unknown[][]
       config[sheetName] = {}
     }
@@ -77,7 +74,6 @@ export default function Home() {
     setStep('configure')
   }, [])
 
-  // Shared helper: scan a single sheet and return AI results
   const scanSheet = useCallback(async (sheetName: string): Promise<{ suggested: number[]; data: AiScanResponse } | null> => {
     const rows = sheetData[sheetName]
     if (!rows || rows.length === 0) return null
@@ -116,7 +112,7 @@ export default function Home() {
 
     if (!res.ok) {
       const err = await res.json() as { error?: string }
-      throw new Error(err.error ?? `AI tarama başarısız (${sheetName})`)
+      throw new Error(err.error ?? `AI tarama ba\u015Far\u0131s\u0131z (${sheetName})`)
     }
 
     const data: AiScanResponse = await res.json() as AiScanResponse
@@ -139,7 +135,6 @@ export default function Home() {
     return { suggested, data }
   }, [sheetData])
 
-  // Scan only the active sheet
   const handleAiScan = useCallback(async () => {
     if (!activeSheet || !sheetData[activeSheet]) return
     setAiLoading(true)
@@ -147,13 +142,12 @@ export default function Home() {
       await scanSheet(activeSheet)
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'AI tarama hatası')
+      alert(err instanceof Error ? err.message : 'AI tarama hatas\u0131')
     } finally {
       setAiLoading(false)
     }
   }, [activeSheet, sheetData, scanSheet])
 
-  // Scan ALL sheets sequentially
   const handleAiScanAll = useCallback(async () => {
     if (sheetNames.length === 0) return
     setAiAllLoading(true)
@@ -165,7 +159,7 @@ export default function Home() {
       setAiAllProgress('')
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'AI tarama hatası')
+      alert(err instanceof Error ? err.message : 'AI tarama hatas\u0131')
     } finally {
       setAiAllLoading(false)
       setAiAllProgress('')
@@ -176,9 +170,6 @@ export default function Home() {
     if (!fileBuffer) return
     setProcessing(true)
     try {
-      // ZIP-level patch: ONLY xl/sharedStrings.xml values are changed.
-      // xl/styles.xml, sheet XML formatting attributes — everything else is
-      // untouched bit-for-bit. Row colors, borders, fonts all survive.
       const { buffer: outBuffer, mapping: builtMapping } = await anonymizeBuffer(
         fileBuffer,
         sheetData,
@@ -213,7 +204,7 @@ export default function Home() {
       setStep('done')
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'Maskeleme hatası')
+      alert(err instanceof Error ? err.message : 'Maskeleme hatas\u0131')
     } finally {
       setProcessing(false)
     }
@@ -250,7 +241,7 @@ export default function Home() {
         const parsed = JSON.parse(e.target?.result as string) as AnonymizationMapping
         setDeanonMapData(parsed)
       } catch {
-        alert('Mapping JSON okunamadı')
+        alert('Mapping JSON okunamad\u0131')
       }
     }
     reader.readAsText(file)
@@ -259,7 +250,6 @@ export default function Home() {
   const handleDeanonymize = useCallback(async () => {
     if (!deanonBuffer || !deanonMapData) return
     try {
-      // ZIP-level reverse patch — same approach as anonymization
       const reverseMapping: Record<string, string> = Object.fromEntries(
         Object.entries(deanonMapData.mapping).map(([k, v]) => [v, k]),
       )
@@ -278,7 +268,7 @@ export default function Home() {
       setDeanonDone(true)
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'Geri yükleme hatası')
+      alert(err instanceof Error ? err.message : 'Geri y\u00FCkleme hatas\u0131')
     }
   }, [deanonBuffer, deanonMapData, deanonFilename])
 
@@ -292,13 +282,13 @@ export default function Home() {
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            Privacy-First · Client-Side Processing
+            Privacy-First \u00B7 Client-Side Processing
           </div>
           <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
-            Veri Maskeleme Aracı
+            Veri Maskeleme Arac\u0131
           </h1>
           <p className="text-zinc-500 text-sm">
-            Excel dosyalarındaki kişi ve firma adlarını güvenle maskele — veriler cihazınızdan çıkmaz
+            Excel dosyalar\u0131ndaki ki\u015Fi ve firma adlar\u0131n\u0131 g\u00FCvenle maskele \u2014 veriler cihaz\u0131n\u0131zdan \u00E7\u0131kmaz
           </p>
         </div>
 
@@ -311,7 +301,7 @@ export default function Home() {
                 ? 'bg-zinc-800 text-white shadow-sm'
                 : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            🔒 Maskele
+            \uD83D\uDD12 Maskele
           </button>
           <button
             onClick={() => setActiveTab('deanon')}
@@ -320,7 +310,7 @@ export default function Home() {
                 ? 'bg-zinc-800 text-white shadow-sm'
                 : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            🔓 Geri Al
+            \uD83D\uDD13 Geri Al
           </button>
         </div>
 
@@ -339,32 +329,32 @@ export default function Home() {
                       </svg>
                     </div>
                     <span className="font-medium text-zinc-200">{filename}</span>
-                    <span className="text-zinc-600">·</span>
+                    <span className="text-zinc-600">\u00B7</span>
                     <span className="text-zinc-500">{sheetNames.length} sayfa</span>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleAiScan}
-                      disabled={aiLoading || aiAllLoading}
-                      className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
-                    >
-                      {aiLoading ? '⏳ Tarıyor...' : '✨ AI ile Tara'}
-                    </button>
                     {sheetNames.length > 1 && (
                       <button
                         onClick={handleAiScanAll}
                         disabled={aiLoading || aiAllLoading}
                         className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
                       >
-                        {aiAllLoading ? `⏳ ${aiAllProgress}` : '🚀 AI All Tabs'}
+                        {aiAllLoading ? `\u23F3 ${aiAllProgress}` : '\uD83D\uDE80 AI T\u00FCm Tablar'}
                       </button>
                     )}
+                    <button
+                      onClick={handleAiScan}
+                      disabled={aiLoading || aiAllLoading}
+                      className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
+                    >
+                      {aiLoading ? '\u23F3 Tar\u0131yor...' : '\u2728 AI ile Tara'}
+                    </button>
                     <button
                       onClick={handleAnonymize}
                       disabled={taggedCount === 0 || processing}
                       className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 shadow-lg shadow-blue-600/20"
                     >
-                      {processing ? 'İşleniyor...' : `🔒 Maskele & İndir (${taggedCount} kolon)`}
+                      {processing ? '\u0130\u015Fleniyor...' : `\uD83D\uDD12 Maskele & \u0130ndir (${taggedCount} kolon)`}
                     </button>
                   </div>
                 </div>
@@ -384,7 +374,7 @@ export default function Home() {
                 />
 
                 <p className="text-xs text-zinc-600">
-                  Sütun başlığındaki butona tıklayarak tipi değiştir: YOK → KİŞİ → FİRMA → YOK
+                  S\u00FCtun ba\u015Fl\u0131\u011F\u0131ndaki butona t\u0131klayarak tipi de\u011Fi\u015Ftir: YOK \u2192 K\u0130\u015E\u0130 \u2192 F\u0130RMA \u2192 YOK
                 </p>
               </div>
             )}
@@ -392,17 +382,17 @@ export default function Home() {
             {step === 'done' && (
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col items-center gap-3 p-8 bg-green-500/5 border border-green-500/20 rounded-2xl">
-                  <span className="text-5xl">✅</span>
-                  <h2 className="text-lg font-semibold text-green-400">Maskeleme tamamlandı!</h2>
+                  <span className="text-5xl">\u2705</span>
+                  <h2 className="text-lg font-semibold text-green-400">Maskeleme tamamland\u0131!</h2>
                   <p className="text-sm text-zinc-400 text-center">
-                    Orijinal Excel formatı korunarak sadece seçili kolonlardaki isimler değiştirildi.
+                    Orijinal Excel format\u0131 korunarak sadece se\u00E7ili kolonlardaki isimler de\u011Fi\u015Ftirildi.
                   </p>
                   <p className="text-xs text-zinc-500 text-center">
                     <span className="text-zinc-300 font-medium">anon_{filename}</span>
                     {' '}ve{' '}
                     <span className="text-zinc-300 font-medium">mapping JSON</span>
                     {' '}indirildi.{' '}
-                    <span className="text-amber-400">Mapping JSON&apos;ını güvenli bir yerde saklayın.</span>
+                    <span className="text-amber-400">Mapping JSON&apos;\u0131n\u0131 g\u00FCvenli bir yerde saklay\u0131n.</span>
                   </p>
                 </div>
                 <MappingTable mapping={mapping} />
@@ -419,7 +409,7 @@ export default function Home() {
                   }}
                   className="self-center px-5 py-2 text-sm font-medium bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 hover:text-white transition-all duration-150 border border-zinc-700"
                 >
-                  ↩ Yeni Dosya
+                  \u21A9 Yeni Dosya
                 </button>
               </div>
             )}
@@ -434,7 +424,7 @@ export default function Home() {
                 <h2 className="text-base font-semibold text-zinc-200">Maskelemeyi Geri Al</h2>
 
                 <div>
-                  <p className="text-sm font-medium text-zinc-400 mb-2">Adım 1 — Anonim Excel dosyasını seç</p>
+                  <p className="text-sm font-medium text-zinc-400 mb-2">Ad\u0131m 1 \u2014 Anonim Excel dosyas\u0131n\u0131 se\u00E7</p>
                   <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-150
                     ${deanonBuffer
                       ? 'border-green-500/40 bg-green-500/5'
@@ -443,7 +433,7 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z" />
                     </svg>
                     <span className={`text-sm ${deanonBuffer ? 'text-green-400' : 'text-zinc-500'}`}>
-                      {deanonBuffer ? `✓ ${deanonFilename}` : 'anon_*.xlsx dosyasını seç'}
+                      {deanonBuffer ? `\u2713 ${deanonFilename}` : 'anon_*.xlsx dosyas\u0131n\u0131 se\u00E7'}
                     </span>
                     <input
                       type="file"
@@ -455,7 +445,7 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-zinc-400 mb-2">Adım 2 — Mapping JSON dosyasını seç</p>
+                  <p className="text-sm font-medium text-zinc-400 mb-2">Ad\u0131m 2 \u2014 Mapping JSON dosyas\u0131n\u0131 se\u00E7</p>
                   <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-150
                     ${deanonMapData
                       ? 'border-green-500/40 bg-green-500/5'
@@ -465,8 +455,8 @@ export default function Home() {
                     </svg>
                     <span className={`text-sm ${deanonMapData ? 'text-green-400' : 'text-zinc-500'}`}>
                       {deanonMapData
-                        ? `✓ ${deanonMapData.originalFile} — ${Object.keys(deanonMapData.mapping).length} kayıt`
-                        : 'mapping_*.json dosyasını seç'}
+                        ? `\u2713 ${deanonMapData.originalFile} \u2014 ${Object.keys(deanonMapData.mapping).length} kay\u0131t`
+                        : 'mapping_*.json dosyas\u0131n\u0131 se\u00E7'}
                     </span>
                     <input
                       type="file"
@@ -482,13 +472,13 @@ export default function Home() {
                   disabled={!deanonBuffer || !deanonMapData}
                   className="self-start px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 shadow-lg shadow-blue-600/20"
                 >
-                  🔓 Geri Yükle & İndir
+                  \uD83D\uDD13 Geri Y\u00FCkle & \u0130ndir
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 p-8 bg-green-500/5 border border-green-500/20 rounded-2xl">
-                <span className="text-5xl">✅</span>
-                <h2 className="text-lg font-semibold text-green-400">Geri yükleme tamamlandı!</h2>
+                <span className="text-5xl">\u2705</span>
+                <h2 className="text-lg font-semibold text-green-400">Geri y\u00FCkleme tamamland\u0131!</h2>
                 <p className="text-sm text-zinc-400">restored_{deanonFilename} indirildi.</p>
                 <button
                   onClick={() => {
@@ -499,7 +489,7 @@ export default function Home() {
                   }}
                   className="px-5 py-2 text-sm font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-lg hover:bg-zinc-700 hover:text-white transition-all duration-150"
                 >
-                  ↩ Yeni Dosya
+                  \u21A9 Yeni Dosya
                 </button>
               </div>
             )}
@@ -507,7 +497,7 @@ export default function Home() {
         )}
 
         <p className="text-center text-xs text-zinc-700 mt-8">
-          Tüm işlemler tarayıcınızda gerçekleşir · Dosyalarınız hiçbir sunucuya gönderilmez
+          T\u00FCm i\u015Flemler taray\u0131c\u0131n\u0131zda ger\u00E7ekle\u015Fir \u00B7 Dosyalar\u0131n\u0131z hi\u00E7bir sunucuya g\u00F6nderilmez
         </p>
       </div>
     </div>
