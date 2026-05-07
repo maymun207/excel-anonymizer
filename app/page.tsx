@@ -88,7 +88,7 @@ export default function Home() {
               return val === null || val === undefined ? '' : String(val).trim()
             })
             .filter(v => v !== '')
-            .slice(0, 5)
+            .slice(0, 10)
           return { index: idx, header, samples }
         })
         .filter(c => c.samples.length > 0)
