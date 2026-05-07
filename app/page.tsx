@@ -25,6 +25,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('anon')
   const [step, setStep] = useState<Step>('upload')
 
+  // Store original file buffer so we can re-read and modify in-place
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null)
   const [filename, setFilename] = useState('')
   const [sheetData, setSheetData] = useState<Record<string, unknown[][]>>({})
@@ -36,6 +37,7 @@ export default function Home() {
   const [aiSuggested, setAiSuggested] = useState<Record<string, number[]>>({})
   const [processing, setProcessing] = useState(false)
 
+  // De-anonymize state
   const [deanonBuffer, setDeanonBuffer] = useState<ArrayBuffer | null>(null)
   const [deanonFilename, setDeanonFilename] = useState('')
   const [deanonMapData, setDeanonMapData] = useState<AnonymizationMapping | null>(null)
@@ -43,6 +45,7 @@ export default function Home() {
 
   const handleFile = useCallback(async (file: File) => {
     const buffer = await file.arrayBuffer()
+    // Read with all options to preserve as much metadata as possible
     const wb = XLSX.read(buffer, {
       type: 'array',
       cellStyles: true,
@@ -58,7 +61,7 @@ export default function Home() {
       data[sheetName] = XLSX.utils.sheet_to_json(ws, {
         header: 1,
         defval: '',
-        raw: false,
+        raw: false, // keep formatted text for preview
       }) as unknown[][]
       config[sheetName] = {}
     }
@@ -77,21 +80,32 @@ export default function Home() {
     setAiLoading(true)
     try {
       const rows = sheetData[activeSheet]
-      const headers = (rows[0] ?? []).map(h => (h === null || h === undefined ? '' : String(h)))
-      const dataRows = rows.slice(1, 11)
 
-      const columns: AiScanRequest['columns'] = headers
-        .map((header, idx) => {
-          const samples = dataRows
-            .map(row => {
-              const val = row[idx]
-              return val === null || val === undefined ? '' : String(val).trim()
-            })
-            .filter(v => v !== '')
-            .slice(0, 10)
-          return { index: idx, header, samples }
-        })
-        .filter(c => c.samples.length > 0)
+      // Find the maximum column count across all rows
+      const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0)
+
+      // Find the first non-empty row to use as a potential header
+      const firstDataRowIdx = rows.findIndex(row =>
+        row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''),
+      )
+      const headerRow = firstDataRowIdx >= 0 ? rows[firstDataRowIdx] : []
+      const headers = Array.from({ length: maxCols }, (_, i) => {
+        const h = headerRow[i]
+        return h === null || h === undefined ? '' : String(h).trim()
+      })
+
+      // Collect samples from ALL rows (skip the header row itself)
+      const columns: AiScanRequest['columns'] = Array.from({ length: maxCols }, (_, idx) => {
+        const samples: string[] = []
+        for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+          if (rIdx === firstDataRowIdx) continue // skip header
+          const val = rows[rIdx]?.[idx]
+          const str = val === null || val === undefined ? '' : String(val).trim()
+          if (str !== '' && !samples.includes(str)) samples.push(str)
+          if (samples.length >= 10) break
+        }
+        return { index: idx, header: headers[idx] ?? '', samples }
+      }).filter(c => c.samples.length > 0)
 
       const res = await fetch('/api/ai-scan', {
         method: 'POST',
@@ -216,6 +230,7 @@ export default function Home() {
   const handleDeanonymize = useCallback(async () => {
     if (!deanonBuffer || !deanonMapData) return
     try {
+      // ZIP-level reverse patch — same approach as anonymization
       const reverseMapping: Record<string, string> = Object.fromEntries(
         Object.entries(deanonMapData.mapping).map(([k, v]) => [v, k]),
       )
@@ -244,6 +259,7 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-4 py-12">
 
+        {/* Header */}
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -257,6 +273,7 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Tab bar */}
         <div className="flex gap-1 mb-6 p-1 bg-zinc-900 border border-zinc-800 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab('anon')}
@@ -278,6 +295,7 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Maskele Tab */}
         {activeTab === 'anon' && (
           <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl shadow-black/20">
             {step === 'upload' && <DropZone onFile={handleFile} />}
@@ -313,7 +331,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                <SheetTabs sheets={sheetNames} active={activeSheet} onChange={setActiveSheet} />
+                <SheetTabs
+                  sheets={sheetNames}
+                  active={activeSheet}
+                  onChange={setActiveSheet}
+                />
 
                 <ColumnTable
                   headers={headers}
@@ -366,6 +388,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* Geri Al Tab */}
         {activeTab === 'deanon' && (
           <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl shadow-black/20">
             {!deanonDone ? (
