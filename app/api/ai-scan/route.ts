@@ -83,7 +83,7 @@ Yanıtını SADECE JSON olarak ver.`
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1000,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     })
@@ -94,13 +94,25 @@ Yanıtını SADECE JSON olarak ver.`
     }
 
     // Strip markdown code fences if the model wraps the response
-    const stripped = textContent.text
+    let stripped = textContent.text
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/, '')
       .trim()
 
-    const parsed: AiScanResponse = JSON.parse(stripped)
+    // Attempt to recover truncated JSON (e.g. model hit max_tokens)
+    let parsed: AiScanResponse
+    try {
+      parsed = JSON.parse(stripped)
+    } catch {
+      // Try closing open brackets/braces
+      const openBraces = (stripped.match(/{/g) || []).length - (stripped.match(/}/g) || []).length
+      const openBrackets = (stripped.match(/\[/g) || []).length - (stripped.match(/]/g) || []).length
+      // Remove trailing comma if present
+      stripped = stripped.replace(/,\s*$/, '')
+      stripped += ']'.repeat(Math.max(0, openBrackets)) + '}'.repeat(Math.max(0, openBraces))
+      parsed = JSON.parse(stripped)
+    }
 
     // Validate structure before returning
     if (!parsed?.columns || !Array.isArray(parsed.columns)) {
