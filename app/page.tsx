@@ -6,7 +6,7 @@ import DropZone from '@/components/DropZone'
 import SheetTabs from '@/components/SheetTabs'
 import ColumnTable from '@/components/ColumnTable'
 import MappingTable from '@/components/MappingTable'
-import { buildMapping, anonymizeWorkbookInPlace, deanonymizeWorkbookInPlace } from '@/lib/anonymizer'
+import { anonymizeBuffer, deanonymizeBuffer } from '@/lib/anonymizer'
 import type {
   SheetColumnConfig,
   ColumnType,
@@ -132,28 +132,18 @@ export default function Home() {
     }
   }, [activeSheet, sheetData])
 
-  const handleAnonymize = useCallback(() => {
+  const handleAnonymize = useCallback(async () => {
     if (!fileBuffer) return
     setProcessing(true)
     try {
-      // Re-read the ORIGINAL file buffer — preserves all styles, formulas, merges
-      const wb = XLSX.read(fileBuffer, {
-        type: 'array',
-        cellStyles: true,
-        cellNF: true,
-        cellFormula: true,
-        sheetStubs: true,
-      })
-
-      // Modify ONLY the configured cells in-place — everything else is untouched
-      const builtMapping = anonymizeWorkbookInPlace(wb, sheetData, columnConfig)
-
-      // Write back the same workbook object — original structure is preserved
-      const outBuffer = XLSX.write(wb, {
-        bookType: 'xlsx',
-        type: 'array',
-        cellStyles: true,
-      }) as ArrayBuffer
+      // ZIP-level patch: ONLY xl/sharedStrings.xml values are changed.
+      // xl/styles.xml, sheet XML formatting attributes — everything else is
+      // untouched bit-for-bit. Row colors, borders, fonts all survive.
+      const { buffer: outBuffer, mapping: builtMapping } = await anonymizeBuffer(
+        fileBuffer,
+        sheetData,
+        columnConfig,
+      )
 
       const blob = new Blob([outBuffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -165,7 +155,6 @@ export default function Home() {
       a.click()
       URL.revokeObjectURL(url)
 
-      // Also download the mapping JSON for later de-anonymization
       const mapData: AnonymizationMapping = {
         version: 1,
         created: new Date().toISOString().slice(0, 10),
@@ -182,6 +171,9 @@ export default function Home() {
 
       setMapping(builtMapping)
       setStep('done')
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : 'Maskeleme hatası')
     } finally {
       setProcessing(false)
     }
@@ -224,44 +216,30 @@ export default function Home() {
     reader.readAsText(file)
   }, [])
 
-  const handleDeanonymize = useCallback(() => {
+  const handleDeanonymize = useCallback(async () => {
     if (!deanonBuffer || !deanonMapData) return
+    try {
+      // ZIP-level reverse patch — same approach as anonymization
+      const reverseMapping: Record<string, string> = Object.fromEntries(
+        Object.entries(deanonMapData.mapping).map(([k, v]) => [v, k]),
+      )
+      const outBuffer = await deanonymizeBuffer(deanonBuffer, reverseMapping)
 
-    // Re-read the anonymized workbook preserving all styles
-    const wb = XLSX.read(deanonBuffer, {
-      type: 'array',
-      cellStyles: true,
-      cellNF: true,
-      cellFormula: true,
-      sheetStubs: true,
-    })
+      const blob = new Blob([outBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'restored_' + deanonFilename
+      a.click()
+      URL.revokeObjectURL(url)
 
-    // Build reverse mapping: label → original
-    const reverseMapping: Record<string, string> = Object.fromEntries(
-      Object.entries(deanonMapData.mapping).map(([k, v]) => [v, k])
-    )
-
-    // Replace labels back to originals in-place
-    deanonymizeWorkbookInPlace(wb, reverseMapping)
-
-    // Write back
-    const outBuffer = XLSX.write(wb, {
-      bookType: 'xlsx',
-      type: 'array',
-      cellStyles: true,
-    }) as ArrayBuffer
-
-    const blob = new Blob([outBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'restored_' + deanonFilename
-    a.click()
-    URL.revokeObjectURL(url)
-
-    setDeanonDone(true)
+      setDeanonDone(true)
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : 'Geri yükleme hatası')
+    }
   }, [deanonBuffer, deanonMapData, deanonFilename])
 
   return (

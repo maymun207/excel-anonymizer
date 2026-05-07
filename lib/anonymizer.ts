@@ -1,13 +1,31 @@
-import * as XLSX from 'xlsx'
+import JSZip from 'jszip'
 import type { SheetColumnConfig, ColumnType } from './types'
 
-/**
- * Build a mapping dictionary from original values to anonymous labels.
- * Scans all sheets to ensure cross-sheet consistency.
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function replaceAll(str: string, find: string, replace: string): string {
+  if (!find) return str
+  return str.split(find).join(replace)
+}
+
+// ---------------------------------------------------------------------------
+// Build mapping from sheetData + column config
+// ---------------------------------------------------------------------------
+
 export function buildMapping(
   sheetData: Record<string, unknown[][]>,
-  columnConfig: SheetColumnConfig
+  columnConfig: SheetColumnConfig,
 ): Record<string, string> {
   const mapping: Record<string, string> = {}
   let personCount = 0
@@ -23,7 +41,6 @@ export function buildMapping(
         const raw = row[colIdx]
         const val = raw === null || raw === undefined ? '' : String(raw).trim()
         if (!val || mapping[val] !== undefined) continue
-
         if (colType === 'PERSON') {
           personCount += 1
           mapping[val] = `KİŞİ_${String(personCount).padStart(3, '0')}`
@@ -34,88 +51,125 @@ export function buildMapping(
       }
     }
   }
-
   return mapping
 }
 
+// ---------------------------------------------------------------------------
+// ZIP-level patch helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Modify workbook cells IN-PLACE.
- *
- * This approach preserves EVERYTHING in the original file:
- *  - Cell styles, fonts, colors, borders
- *  - Column widths, row heights
- *  - Merged cells (!merges)
- *  - Formulas in other cells
- *  - Number formats
- *
- * Only the .v (value) and .w (formatted text) of cells in
- * configured columns are replaced. Nothing else is touched.
+ * Patch a single XML string: replace all occurrences of each original name
+ * with its anonymized label, in both <t>...</t> and <t xml:space="preserve">...</t> forms.
  */
-export function anonymizeWorkbookInPlace(
-  wb: XLSX.WorkBook,
+function patchXml(
+  xml: string,
+  entries: [string, string][],   // [original, replacement]
+): string {
+  for (const [original, replacement] of entries) {
+    const esc = escapeXml(original)
+    const replEsc = escapeXml(replacement)
+    // plain form
+    xml = replaceAll(xml, `<t>${esc}</t>`, `<t>${replEsc}</t>`)
+    // preserve form
+    xml = replaceAll(
+      xml,
+      `<t xml:space="preserve">${esc}</t>`,
+      `<t xml:space="preserve">${replEsc}</t>`,
+    )
+  }
+  return xml
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Anonymize an xlsx buffer at the ZIP level.
+ *
+ * ONLY xl/sharedStrings.xml (and inline strings in sheet XMLs) are modified.
+ * xl/styles.xml, xl/theme/*, xl/worksheets/sheet*.xml (formatting attributes),
+ * drawings, images — everything else is untouched bit-for-bit.
+ */
+export async function anonymizeBuffer(
+  originalBuffer: ArrayBuffer,
   sheetData: Record<string, unknown[][]>,
-  columnConfig: SheetColumnConfig
-): Record<string, string> {
+  columnConfig: SheetColumnConfig,
+): Promise<{ buffer: ArrayBuffer; mapping: Record<string, string> }> {
   const mapping = buildMapping(sheetData, columnConfig)
+  const entries = Object.entries(mapping) as [string, string][]
 
-  for (const sheetName of wb.SheetNames) {
-    const ws = wb.Sheets[sheetName]
-    if (!ws || !ws['!ref']) continue
-
-    const colConfig = columnConfig[sheetName] ?? {}
-    const range = XLSX.utils.decode_range(ws['!ref'])
-
-    // Start from row index 1 — row 0 is the header, never touch it
-    for (let row = range.s.r + 1; row <= range.e.r; row++) {
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const colType: ColumnType = (colConfig[col] as ColumnType) ?? 'none'
-        if (colType === 'none') continue
-
-        const cellAddr = XLSX.utils.encode_cell({ r: row, c: col })
-        const cell = ws[cellAddr]
-        if (!cell) continue
-
-        const original = String(cell.v ?? '').trim()
-        const replacement = mapping[original]
-        if (replacement !== undefined) {
-          // Only change the value — leave style, format, type, etc. intact
-          cell.v = replacement
-          cell.w = replacement
-        }
-      }
-    }
+  if (entries.length === 0) {
+    // Nothing to anonymize — return original
+    return { buffer: originalBuffer, mapping }
   }
 
-  return mapping
+  const zip = await JSZip.loadAsync(originalBuffer)
+
+  // 1. Patch shared strings (the primary string store in xlsx)
+  const ssFile = zip.file('xl/sharedStrings.xml')
+  if (ssFile) {
+    const xml = await ssFile.async('text')
+    zip.file('xl/sharedStrings.xml', patchXml(xml, entries))
+  }
+
+  // 2. Patch inline strings in each sheet XML (rare, but cover it)
+  const sheetPaths: string[] = []
+  zip.forEach((rel: string) => {
+    if (/^xl\/worksheets\/sheet\d+\.xml$/.test(rel)) sheetPaths.push(rel)
+  })
+  for (const path of sheetPaths) {
+    const f = zip.file(path)
+    if (!f) continue
+    const xml = await f.async('text')
+    const patched = patchXml(xml, entries)
+    if (patched !== xml) zip.file(path, patched)
+  }
+
+  const buffer = await zip.generateAsync({
+    type: 'arraybuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  })
+
+  return { buffer, mapping }
 }
 
 /**
- * Reverse the anonymization in-place using a saved mapping.
+ * De-anonymize an xlsx buffer at the ZIP level (reverse mapping).
  */
-export function deanonymizeWorkbookInPlace(
-  wb: XLSX.WorkBook,
-  reverseMapping: Record<string, string>
-): void {
-  for (const sheetName of wb.SheetNames) {
-    if (sheetName === '__MAPPING__') continue
-    const ws = wb.Sheets[sheetName]
-    if (!ws || !ws['!ref']) continue
+export async function deanonymizeBuffer(
+  anonymizedBuffer: ArrayBuffer,
+  reverseMapping: Record<string, string>, // label → original
+): Promise<ArrayBuffer> {
+  const entries = Object.entries(reverseMapping) as [string, string][]
 
-    const range = XLSX.utils.decode_range(ws['!ref'])
+  if (entries.length === 0) return anonymizedBuffer
 
-    for (let row = range.s.r + 1; row <= range.e.r; row++) {
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellAddr = XLSX.utils.encode_cell({ r: row, c: col })
-        const cell = ws[cellAddr]
-        if (!cell) continue
+  const zip = await JSZip.loadAsync(anonymizedBuffer)
 
-        const label = String(cell.v ?? '').trim()
-        const original = reverseMapping[label]
-        if (original !== undefined) {
-          cell.v = original
-          cell.w = original
-        }
-      }
-    }
+  const ssFile = zip.file('xl/sharedStrings.xml')
+  if (ssFile) {
+    const xml = await ssFile.async('text')
+    zip.file('xl/sharedStrings.xml', patchXml(xml, entries))
   }
+
+  const sheetPaths: string[] = []
+  zip.forEach((rel: string) => {
+    if (/^xl\/worksheets\/sheet\d+\.xml$/.test(rel)) sheetPaths.push(rel)
+  })
+  for (const path of sheetPaths) {
+    const f = zip.file(path)
+    if (!f) continue
+    const xml = await f.async('text')
+    const patched = patchXml(xml, entries)
+    if (patched !== xml) zip.file(path, patched)
+  }
+
+  return zip.generateAsync({
+    type: 'arraybuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  })
 }
