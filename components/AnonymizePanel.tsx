@@ -70,7 +70,7 @@ export default function AnonymizePanel(props: Props) {
                   className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
                 >
                   {aiAllLoading
-                    ? `\u23f3 ${aiAllProgress}`
+                    ? `⏳ ${aiAllProgress}`
                     : t.aiAllTabs[locale]}
                 </button>
               )}
@@ -116,7 +116,7 @@ export default function AnonymizePanel(props: Props) {
       {step === 'done' && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col items-center gap-3 p-8 bg-green-500/5 border border-green-500/20 rounded-2xl">
-            <span className="text-5xl">\u2705</span>
+            <span className="text-5xl">✅</span>
             <h2 className="text-lg font-semibold text-green-400">
               {t.doneTitle[locale]}
             </h2>

@@ -12,6 +12,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ### ✨ Key Features
 
@@ -117,7 +118,7 @@ Visit [http://localhost:3000](http://localhost:3000) to start anonymizing.
 
 #### 2. Kurulum
 
-Depoyu klonlayın ve bağımlılıkları yükleyin:
+Depoyu klonlayın ve bağımlılıkleyin:
 
 ```bash
 git clone https://github.com/maymun207/excel-anonymizer.git
@@ -180,7 +181,7 @@ Anonimleştirmeye başlamak için [http://localhost:3000](http://localhost:3000)
 
 ### 📄 Lisans
 
-Bu proje özeldir. (Gerekirse uygun lisansla güncelleyin)
+Bu proje açık kaynaklıdır ve **Apache Lisansı 2.0** altında sunulmaktadır. Kullanmakta, değiştirmekte ve dağıtmakta özgürsünüz.
 
 ---
 *Güvenli veri işleme için ❤️ ile geliştirildi.*
