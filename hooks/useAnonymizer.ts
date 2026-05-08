@@ -32,6 +32,10 @@ export function useAnonymizer() {
   const [aiSuggested, setAiSuggested] = useState<Record<string, number[]>>({})
   const [processing, setProcessing] = useState(false)
 
+  // ---------------------------------------------------------------------------
+  // File upload
+  // ---------------------------------------------------------------------------
+
   const handleFile = useCallback(async (file: File) => {
     const buffer = await file.arrayBuffer()
     const wb = XLSX.read(buffer, {
@@ -62,6 +66,10 @@ export function useAnonymizer() {
     setActiveSheet(wb.SheetNames[0] ?? '')
     setStep('configure')
   }, [])
+
+  // ---------------------------------------------------------------------------
+  // AI scanning
+  // ---------------------------------------------------------------------------
 
   const scanSheet = useCallback(
     async (
@@ -111,7 +119,7 @@ export function useAnonymizer() {
 
       if (!res.ok) {
         const err = (await res.json()) as { error?: string }
-        throw new Error(err.error ?? `AI tarama başarısız (${sheetName})`)
+        throw new Error(err.error ?? `AI scan failed (${sheetName})`)
       }
 
       const data: AiScanResponse = (await res.json()) as AiScanResponse
@@ -144,7 +152,7 @@ export function useAnonymizer() {
       await scanSheet(activeSheet)
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'AI tarama hatası')
+      alert(err instanceof Error ? err.message : 'AI scan error')
     } finally {
       setAiLoading(false)
     }
@@ -161,12 +169,16 @@ export function useAnonymizer() {
       setAiAllProgress('')
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'AI tarama hatası')
+      alert(err instanceof Error ? err.message : 'AI scan error')
     } finally {
       setAiAllLoading(false)
       setAiAllProgress('')
     }
   }, [sheetNames, scanSheet])
+
+  // ---------------------------------------------------------------------------
+  // Anonymize
+  // ---------------------------------------------------------------------------
 
   const handleAnonymize = useCallback(async () => {
     if (!fileBuffer) return
@@ -205,11 +217,15 @@ export function useAnonymizer() {
       setStep('done')
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'Maskeleme hatası')
+      alert(err instanceof Error ? err.message : 'Anonymization error')
     } finally {
       setProcessing(false)
     }
   }, [fileBuffer, sheetData, columnConfig, filename])
+
+  // ---------------------------------------------------------------------------
+  // Column toggle
+  // ---------------------------------------------------------------------------
 
   const handleToggle = useCallback(
     (colIdx: number) => {
@@ -224,6 +240,10 @@ export function useAnonymizer() {
     [activeSheet],
   )
 
+  // ---------------------------------------------------------------------------
+  // Reset
+  // ---------------------------------------------------------------------------
+
   const resetAll = useCallback(() => {
     setStep('upload')
     setFileBuffer(null)
@@ -234,6 +254,10 @@ export function useAnonymizer() {
     setMapping({})
     setAiSuggested({})
   }, [])
+
+  // ---------------------------------------------------------------------------
+  // Derived data
+  // ---------------------------------------------------------------------------
 
   const taggedCount = Object.values(columnConfig)
     .flatMap(cols => Object.values(cols))
@@ -248,6 +272,7 @@ export function useAnonymizer() {
   const isBusy = aiLoading || aiAllLoading
 
   return {
+    // State
     step,
     filename,
     sheetNames,
@@ -264,6 +289,8 @@ export function useAnonymizer() {
     taggedCount,
     headers,
     previewRows,
+
+    // Handlers
     handleFile,
     handleAiScan,
     handleAiScanAll,
@@ -272,6 +299,10 @@ export function useAnonymizer() {
     resetAll,
   }
 }
+
+// ---------------------------------------------------------------------------
+// De-anonymize hook
+// ---------------------------------------------------------------------------
 
 export function useDeanonymizer() {
   const [deanonBuffer, setDeanonBuffer] = useState<ArrayBuffer | null>(null)
@@ -295,7 +326,7 @@ export function useDeanonymizer() {
         ) as AnonymizationMapping
         setDeanonMapData(parsed)
       } catch {
-        alert('Mapping JSON okunamadı')
+        alert('Could not parse mapping JSON')
       }
     }
     reader.readAsText(file)
@@ -322,7 +353,7 @@ export function useDeanonymizer() {
       setDeanonDone(true)
     } catch (err) {
       console.error(err)
-      alert(err instanceof Error ? err.message : 'Geri yükleme hatası')
+      alert(err instanceof Error ? err.message : 'Restoration error')
     }
   }, [deanonBuffer, deanonMapData, deanonFilename])
 
