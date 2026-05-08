@@ -6,6 +6,7 @@ import DeanonymizePanel from '@/components/DeanonymizePanel'
 import PrivacyBanner from '@/components/PrivacyBanner'
 import HowToGuide from '@/components/HowToGuide'
 import AppFooter from '@/components/AppFooter'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { useAnonymizer, useDeanonymizer } from '@/hooks/useAnonymizer'
 import { useLanguage } from '@/hooks/useLanguage'
 
@@ -15,7 +16,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('anon')
   const anonymizer = useAnonymizer()
   const deanonymizer = useDeanonymizer()
-  const { locale, toggle, t } = useLanguage()
+  const { locale, t } = useLanguage()
 
   return (
     <div className="min-h-screen bg-zinc-950 selection:bg-blue-500/30">
@@ -24,16 +25,7 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-4 py-12">
         {/* Language toggle — top right */}
-        <div className="flex justify-end mb-8">
-          <button
-            onClick={toggle}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-all duration-200"
-            title={locale === 'en' ? 'Türkçe\'ye geç' : 'Switch to English'}
-          >
-            <span className="text-sm leading-none">{locale === 'en' ? '🇬🇧' : '🇹🇷'}</span>
-            {locale === 'en' ? 'TR' : 'EN'}
-          </button>
-        </div>
+        <LanguageSwitcher />
 
         {/* Header */}
         <div className="mb-12 text-center">
