@@ -1,6 +1,7 @@
 'use client'
 
 import type { ColumnTypeMap, ColumnType } from '@/lib/types'
+import { useLanguage } from '@/hooks/useLanguage'
 
 interface ColumnTableProps {
   headers: string[]
@@ -10,19 +11,28 @@ interface ColumnTableProps {
   aiSuggested?: number[]
 }
 
-const typeLabel: Record<ColumnType, string> = { none: 'YOK', PERSON: 'KİŞİ', ORG: 'FİRMA' }
 const typeBg: Record<ColumnType, string> = {
   none: 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700',
   PERSON: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30',
   ORG: 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30',
 }
+
 const cellTint: Record<ColumnType, string> = {
   none: 'text-zinc-300',
   PERSON: 'bg-blue-500/10 text-blue-300',
   ORG: 'bg-orange-500/10 text-orange-300',
 }
 
-export default function ColumnTable({ headers, previewRows, columnConfig, onToggle, aiSuggested = [] }: ColumnTableProps) {
+export default function ColumnTable({
+  headers,
+  previewRows,
+  columnConfig,
+  onToggle,
+  aiSuggested = [],
+}: ColumnTableProps) {
+  const { locale, t } = useLanguage()
+  const typeLabels = t.typeLabels[locale]
+
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-800">
       <table className="min-w-full text-sm">
@@ -33,10 +43,15 @@ export default function ColumnTable({ headers, previewRows, columnConfig, onTogg
               return (
                 <th key={idx} className="px-3 py-2.5 text-left font-medium text-zinc-400 whitespace-nowrap">
                   <div className="flex flex-col gap-1.5">
-                    <span className="truncate max-w-[120px] text-zinc-300" title={header}>{header || `Kolon ${idx + 1}`}</span>
+                    <span className="truncate max-w-[120px] text-zinc-300" title={header}>
+                      {header || t.columnFallback[locale](idx + 1)}
+                    </span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => onToggle(idx)} className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${typeBg[colType]}`}>
-                        {typeLabel[colType]}
+                      <button
+                        onClick={() => onToggle(idx)}
+                        className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${typeBg[colType]}`}
+                      >
+                        {typeLabels[colType]}
                       </button>
                       {aiSuggested.includes(idx) && (
                         <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-400">AI</span>
@@ -56,7 +71,11 @@ export default function ColumnTable({ headers, previewRows, columnConfig, onTogg
                 const cellVal = row[cIdx]
                 const display = cellVal === null || cellVal === undefined ? '' : String(cellVal)
                 return (
-                  <td key={cIdx} className={`px-3 py-2 whitespace-nowrap max-w-[150px] truncate text-sm ${cellTint[colType]}`} title={display}>
+                  <td
+                    key={cIdx}
+                    className={`px-3 py-2 whitespace-nowrap max-w-[150px] truncate text-sm ${cellTint[colType]}`}
+                    title={display}
+                  >
                     {display}
                   </td>
                 )
@@ -64,7 +83,11 @@ export default function ColumnTable({ headers, previewRows, columnConfig, onTogg
             </tr>
           ))}
           {previewRows.length === 0 && (
-            <tr><td colSpan={headers.length} className="px-3 py-6 text-center text-zinc-600">Önizleme için veri yok</td></tr>
+            <tr>
+              <td colSpan={headers.length} className="px-3 py-6 text-center text-zinc-600">
+                {t.noPreview[locale]}
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
