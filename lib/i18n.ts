@@ -38,8 +38,8 @@ export const translations = {
 
   // AnonymizePanel — configure toolbar
   pages: { en: 'sheets', tr: 'sayfa' },
-  aiAllTabs: { en: '🚀 AI All Tabs', tr: '🚀 AI Tüm Tablar' },
-  aiScan: { en: '✨ AI Scan', tr: '✨ AI ile Tara' },
+  aiAllTabs: { en: '🚀 AI All Tabs', tr: '🚀 AI tüm tablar' },
+  aiScan: { en: '✨ AI Scan', tr: '✨ AI ile tara' },
   aiScanning: { en: '⏳ Scanning...', tr: '⏳ Tarıyor...' },
   processing: { en: 'Processing...', tr: 'İşleniyor...' },
   anonymizeBtn: {

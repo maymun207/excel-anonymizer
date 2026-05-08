@@ -63,6 +63,13 @@ export default function AnonymizePanel(props: Props) {
               <span className="text-zinc-500">{sheetNames.length} {t.pages[locale]}</span>
             </div>
             <div className="flex gap-2">
+              <button
+                onClick={handleAiScan}
+                disabled={isBusy}
+                className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
+              >
+                {aiLoading ? t.aiScanning[locale] : t.aiScan[locale]}
+              </button>
               {sheetNames.length > 1 && (
                 <button
                   onClick={handleAiScanAll}
@@ -74,13 +81,6 @@ export default function AnonymizePanel(props: Props) {
                     : t.aiAllTabs[locale]}
                 </button>
               )}
-              <button
-                onClick={handleAiScan}
-                disabled={isBusy}
-                className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
-              >
-                {aiLoading ? t.aiScanning[locale] : t.aiScan[locale]}
-              </button>
               <button
                 onClick={handleAnonymize}
                 disabled={taggedCount === 0 || processing || isBusy}

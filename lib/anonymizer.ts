@@ -60,25 +60,41 @@ export function buildMapping(
 
 /**
  * Patch a single XML string: replace all occurrences of each original name
- * with its anonymized label, in both <t>...</t> and <t xml:space="preserve">...</t> forms.
+ * with its anonymized label. 
+ * Uses a regex-based approach to ensure we catch text inside <t> nodes 
+ * regardless of attributes (like xml:space="preserve") or minor whitespace variations.
  */
 function patchXml(
   xml: string,
   entries: [string, string][],   // [original, replacement]
 ): string {
+  if (entries.length === 0) return xml
+
+  // Create a map for O(1) lookups during replacement
+  // We store trimmed versions because our mapping keys are trimmed
+  const mapping = new Map<string, string>()
   for (const [original, replacement] of entries) {
-    const esc = escapeXml(original)
-    const replEsc = escapeXml(replacement)
-    // plain form
-    xml = replaceAll(xml, `<t>${esc}</t>`, `<t>${replEsc}</t>`)
-    // preserve form
-    xml = replaceAll(
-      xml,
-      `<t xml:space="preserve">${esc}</t>`,
-      `<t xml:space="preserve">${replEsc}</t>`,
-    )
+    mapping.set(escapeXml(original).trim(), escapeXml(replacement))
   }
-  return xml
+
+  // This regex matches <t> or <t ...> tags and captures their content.
+  // Group 1: Opening tag (e.g. <t> or <t xml:space="preserve">)
+  // Group 2: Content (the text we want to replace)
+  // Group 3: Closing tag (</t>)
+  return xml.replace(/(<t(?:\s+[^>]*?)?>)(.*?)(<\/t>)/g, (match, openTag, content, closeTag) => {
+    const trimmedContent = content.trim()
+    const replacement = mapping.get(trimmedContent)
+    
+    if (replacement !== undefined) {
+      // We found a match! Replace the content.
+      // We don't preserve the original leading/trailing whitespace from the XML content 
+      // because anonymized labels like "KİŞİ_001" don't need them, 
+      // and it ensures a cleaner restoration later.
+      return `${openTag}${replacement}${closeTag}`
+    }
+    
+    return match
+  })
 }
 
 /**
