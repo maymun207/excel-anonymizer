@@ -1,6 +1,7 @@
 'use client'
 
 import type { ColumnTypeMap, ColumnType } from '@/lib/types'
+import { useLanguage } from '@/hooks/useLanguage'
 
 interface ColumnTableProps {
   headers: string[]
@@ -8,12 +9,6 @@ interface ColumnTableProps {
   columnConfig: ColumnTypeMap
   onToggle: (colIndex: number) => void
   aiSuggested?: number[]
-}
-
-const typeLabel: Record<ColumnType, string> = {
-  none: 'YOK',
-  PERSON: 'KİŞİ',
-  ORG: 'FİRMA',
 }
 
 const typeBg: Record<ColumnType, string> = {
@@ -35,6 +30,9 @@ export default function ColumnTable({
   onToggle,
   aiSuggested = [],
 }: ColumnTableProps) {
+  const { locale, t } = useLanguage()
+  const typeLabels = t.typeLabels[locale]
+
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-800">
       <table className="min-w-full text-sm">
@@ -46,14 +44,14 @@ export default function ColumnTable({
                 <th key={idx} className="px-3 py-2.5 text-left font-medium text-zinc-400 whitespace-nowrap">
                   <div className="flex flex-col gap-1.5">
                     <span className="truncate max-w-[120px] text-zinc-300" title={header}>
-                      {header || `Kolon ${idx + 1}`}
+                      {header || t.columnFallback[locale](idx + 1)}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onToggle(idx)}
                         className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${typeBg[colType]}`}
                       >
-                        {typeLabel[colType]}
+                        {typeLabels[colType]}
                       </button>
                       {aiSuggested.includes(idx) && (
                         <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-400">AI</span>
@@ -87,7 +85,7 @@ export default function ColumnTable({
           {previewRows.length === 0 && (
             <tr>
               <td colSpan={headers.length} className="px-3 py-6 text-center text-zinc-600">
-                Önizleme için veri yok
+                {t.noPreview[locale]}
               </td>
             </tr>
           )}

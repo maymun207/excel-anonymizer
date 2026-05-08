@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, DragEvent, ChangeEvent } from 'react'
+import { useLanguage } from '@/hooks/useLanguage'
 
 interface DropZoneProps {
   onFile: (file: File) => void
@@ -8,6 +9,7 @@ interface DropZoneProps {
 
 export default function DropZone({ onFile }: DropZoneProps) {
   const [dragging, setDragging] = useState(false)
+  const { locale, t } = useLanguage()
 
   const handleDrop = useCallback(
     (e: DragEvent<HTMLDivElement>) => {
@@ -46,9 +48,9 @@ export default function DropZone({ onFile }: DropZoneProps) {
       </div>
       <div className="text-center">
         <p className="text-base font-medium text-zinc-200">
-          Excel dosyasını buraya sürükle veya tıkla
+          {t.dropTitle[locale]}
         </p>
-        <p className="text-sm text-zinc-500 mt-1">.xlsx veya .xls</p>
+        <p className="text-sm text-zinc-500 mt-1">{t.dropHint[locale]}</p>
       </div>
       <input
         id="file-input"
