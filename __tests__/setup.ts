@@ -3,17 +3,24 @@ import { vi } from 'vitest';
 import * as React from 'react';
 
 // React 19 compatibility: Ensure act is available
-// Some environments might not expose it correctly through all import paths
-if (typeof (React as unknown as { act: unknown }).act !== 'function') {
-  // Use a simple fallback if act is missing in the test environment
-  // @ts-expect-error - act might be missing on React type in some versions
-  React.act = (cb: () => Promise<void> | void) => {
-    const result = cb();
-    if (result instanceof Promise) {
-      return result;
-    }
-    return Promise.resolve();
-  };
+// Use a more robust check and assignment to avoid "Cannot redefine property" errors
+try {
+  const anyReact = React as unknown as { act?: (cb: () => Promise<void> | void) => Promise<void> | void };
+  if (typeof anyReact.act !== 'function') {
+    Object.defineProperty(React, 'act', {
+      value: (cb: () => Promise<void> | void) => {
+        const result = cb();
+        if (result instanceof Promise) {
+          return result;
+        }
+        return Promise.resolve();
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+} catch (e) {
+  console.warn('Could not polyfill React.act, tests might fail if act is missing:', e);
 }
 
 // Mock global ResizeObserver if needed for UI components
