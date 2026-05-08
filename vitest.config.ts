@@ -12,5 +12,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './'),
     },
+    server: {
+      deps: {
+        inline: [/@testing-library\/react/],
+      },
+    },
   },
 });
