@@ -22,6 +22,8 @@
 -   **🌍 Fully Bilingual**: Toggle between **English** and **Turkish** interfaces instantly.
 -   **🔑 Reversibility**: Generates a secure `mapping_*.json` file along with the anonymized Excel file, allowing you to restore the original values whenever needed.
 -   **💻 Client-Side processing**: The heavy lifting (Excel manipulation) happens entirely in your browser. Your sensitive files never leave your device.
+-   **📊 Privacy-First Analytics**: Cookie-free traffic tracking powered by Vercel Analytics (GDPR compliant by default).
+-   **🔍 Advanced SEO**: Embedded JSON-LD schema markup, Open Graph tags, and dynamic sitemaps for optimal search engine discoverability.
 
 ---
 
@@ -83,6 +85,15 @@ Visit [http://localhost:3000](http://localhost:3000) to start anonymizing.
 -   **Styling**: Tailwind CSS v4 (Zinc/Blue theme)
 -   **Excel Engine**: [SheetJS (xlsx)](https://sheetjs.com/) for parsing and [JSZip](https://stuk.github.io/jszip/) for precision XML patching.
 -   **AI Integration**: Anthropic SDK (Claude 3.5 Sonnet)
+-   **Analytics & SEO**: Vercel Web Analytics, Next.js Metadata API
+
+---
+
+### ☁️ Deployment
+
+This project is optimized for deployment on [Vercel](https://vercel.com).
+-   **Serverless Timeouts**: The `app/api/ai-scan/route.ts` file includes `export const maxDuration = 60` to prevent timeouts during large AI scans on the Vercel Hobby plan.
+-   **Environment Variables**: Don't forget to add your `ANTHROPIC_API_KEY` in your Vercel project's Environment Variables settings before deploying.
 
 ---
 
@@ -107,6 +118,8 @@ Visit [http://localhost:3000](http://localhost:3000) to start anonymizing.
 -   **🌍 Tamamen Çift Dilli**: İngilizce ve Türkçe arayüzler arasında anında geçiş yapın.
 -   **🔑 Geri Döndürülebilirlik**: Anonimleştirilmiş Excel dosyasıyla birlikte güvenli bir `mapping_*.json` dosyası oluşturur ve ihtiyacınız olduğunda orijinal değerleri geri yüklemenize olanak tanır.
 -   **💻 İstemci Tarafı İşleme**: Ağır işler (Excel manipülasyonu) tamamen tarayıcınızda gerçekleşir. Hassas dosyalarınız asla cihazınızdan ayrılmaz.
+-   **📊 Gizlilik Odaklı Analitik**: Vercel Analytics destekli, çerez (cookie) kullanmayan ve KVKK/GDPR uyumlu trafik takibi.
+-   **🔍 Gelişmiş SEO**: Arama motoru görünürlüğü için entegre JSON-LD yapısal verisi, Open Graph etiketleri ve dinamik site haritaları.
 
 ---
 
@@ -168,6 +181,15 @@ Anonimleştirmeye başlamak için [http://localhost:3000](http://localhost:3000)
 -   **Stil**: Tailwind CSS v4 (Zinc/Mavi tema)
 -   **Excel Motoru**: Ayrıştırma için [SheetJS (xlsx)](https://sheetjs.com/) ve hassas XML yamalama için [JSZip](https://stuk.github.io/jszip/).
 -   **Yapay Zeka Entegrasyonu**: Anthropic SDK (Claude 3.5 Sonnet)
+-   **Analitik & SEO**: Vercel Web Analytics, Next.js Metadata API
+
+---
+
+### ☁️ Dağıtım (Deployment)
+
+Bu proje [Vercel](https://vercel.com) üzerinde yayınlanmak (deploy) için optimize edilmiştir.
+-   **Sunucusuz Zaman Aşımı**: Vercel Hobby planında büyük dosya taramalarında zaman aşımı (timeout) hatasını önlemek için `app/api/ai-scan/route.ts` dosyasında `export const maxDuration = 60` ayarı bulunmaktadır.
+-   **Ortam Değişkenleri**: Vercel projenizin "Environment Variables" bölümüne `ANTHROPIC_API_KEY` değerini eklemeyi unutmayın.
 
 ---
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import type { AiScanRequest, AiScanResponse } from '@/lib/types'
 
+export const maxDuration = 60 // Vercel hobby plan max timeout for AI scanning
+
 // ---------------------------------------------------------------------------
 // System prompt — tells the model WHO it is and HOW to respond
 // ---------------------------------------------------------------------------
