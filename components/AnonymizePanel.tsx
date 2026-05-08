@@ -5,6 +5,7 @@ import SheetTabs from '@/components/SheetTabs'
 import ColumnTable from '@/components/ColumnTable'
 import MappingTable from '@/components/MappingTable'
 import type { useAnonymizer } from '@/hooks/useAnonymizer'
+import { useLanguage } from '@/hooks/useLanguage'
 
 type Props = ReturnType<typeof useAnonymizer>
 
@@ -34,6 +35,8 @@ export default function AnonymizePanel(props: Props) {
     resetAll,
   } = props
 
+  const { locale, t } = useLanguage()
+
   return (
     <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl shadow-black/20">
       {step === 'upload' && <DropZone onFile={handleFile} />}
@@ -57,7 +60,7 @@ export default function AnonymizePanel(props: Props) {
               </div>
               <span className="font-medium text-zinc-200">{filename}</span>
               <span className="text-zinc-600">·</span>
-              <span className="text-zinc-500">{sheetNames.length} sayfa</span>
+              <span className="text-zinc-500">{sheetNames.length} {t.pages[locale]}</span>
             </div>
             <div className="flex gap-2">
               {sheetNames.length > 1 && (
@@ -67,8 +70,8 @@ export default function AnonymizePanel(props: Props) {
                   className="px-3 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg hover:bg-indigo-500/20 disabled:opacity-40 transition-all duration-150"
                 >
                   {aiAllLoading
-                    ? `⏳ ${aiAllProgress}`
-                    : '🚀 AI Tüm Tablar'}
+                    ? `\u23f3 ${aiAllProgress}`
+                    : t.aiAllTabs[locale]}
                 </button>
               )}
               <button
@@ -76,7 +79,7 @@ export default function AnonymizePanel(props: Props) {
                 disabled={isBusy}
                 className="px-3 py-1.5 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 disabled:opacity-40 transition-all duration-150"
               >
-                {aiLoading ? '⏳ Tarıyor...' : '✨ AI ile Tara'}
+                {aiLoading ? t.aiScanning[locale] : t.aiScan[locale]}
               </button>
               <button
                 onClick={handleAnonymize}
@@ -84,8 +87,8 @@ export default function AnonymizePanel(props: Props) {
                 className="px-3 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 shadow-lg shadow-blue-600/20"
               >
                 {processing
-                  ? 'İşleniyor...'
-                  : `🔒 Maskele & İndir (${taggedCount} kolon)`}
+                  ? t.processing[locale]
+                  : t.anonymizeBtn[locale](taggedCount)}
               </button>
             </div>
           </div>
@@ -105,8 +108,7 @@ export default function AnonymizePanel(props: Props) {
           />
 
           <p className="text-xs text-zinc-600">
-            Sütun başlığındaki butona tıklayarak tipi değiştir: YOK → KİŞİ →
-            FİRMA → YOK
+            {t.columnHint[locale]}
           </p>
         </div>
       )}
@@ -114,23 +116,19 @@ export default function AnonymizePanel(props: Props) {
       {step === 'done' && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col items-center gap-3 p-8 bg-green-500/5 border border-green-500/20 rounded-2xl">
-            <span className="text-5xl">✅</span>
+            <span className="text-5xl">\u2705</span>
             <h2 className="text-lg font-semibold text-green-400">
-              Maskeleme tamamlandı!
+              {t.doneTitle[locale]}
             </h2>
             <p className="text-sm text-zinc-400 text-center">
-              Orijinal Excel formatı korunarak sadece seçili kolonlardaki
-              isimler değiştirildi.
+              {t.doneDesc[locale]}
             </p>
             <p className="text-xs text-zinc-500 text-center">
               <span className="text-zinc-300 font-medium">
-                anon_{filename}
+                {t.doneFiles[locale](filename)}
               </span>{' '}
-              ve{' '}
-              <span className="text-zinc-300 font-medium">mapping JSON</span>{' '}
-              indirildi.{' '}
               <span className="text-amber-400">
-                Mapping JSON&apos;ını güvenli bir yerde saklayın.
+                {t.doneWarning[locale]}
               </span>
             </p>
           </div>
@@ -139,7 +137,7 @@ export default function AnonymizePanel(props: Props) {
             onClick={resetAll}
             className="self-center px-5 py-2 text-sm font-medium bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 hover:text-white transition-all duration-150 border border-zinc-700"
           >
-            ↩ Yeni Dosya
+            {t.newFile[locale]}
           </button>
         </div>
       )}

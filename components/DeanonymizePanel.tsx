@@ -1,6 +1,7 @@
 'use client'
 
 import type { useDeanonymizer } from '@/hooks/useAnonymizer'
+import { useLanguage } from '@/hooks/useLanguage'
 
 type Props = ReturnType<typeof useDeanonymizer>
 
@@ -16,17 +17,19 @@ export default function DeanonymizePanel(props: Props) {
     resetDeanon,
   } = props
 
+  const { locale, t } = useLanguage()
+
   return (
     <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl shadow-black/20">
       {!deanonDone ? (
         <div className="flex flex-col gap-5">
           <h2 className="text-base font-semibold text-zinc-200">
-            Maskelemeyi Geri Al
+            {t.restoreTitle[locale]}
           </h2>
 
           <div>
             <p className="text-sm font-medium text-zinc-400 mb-2">
-              Adım 1 — Anonim Excel dosyasını seç
+              {t.restoreStep1[locale]}
             </p>
             <label
               className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-150
@@ -53,8 +56,8 @@ export default function DeanonymizePanel(props: Props) {
                 className={`text-sm ${deanonBuffer ? 'text-green-400' : 'text-zinc-500'}`}
               >
                 {deanonBuffer
-                  ? `✓ ${deanonFilename}`
-                  : 'anon_*.xlsx dosyasını seç'}
+                  ? `\u2713 ${deanonFilename}`
+                  : t.restoreStep1Hint[locale]}
               </span>
               <input
                 type="file"
@@ -70,7 +73,7 @@ export default function DeanonymizePanel(props: Props) {
 
           <div>
             <p className="text-sm font-medium text-zinc-400 mb-2">
-              Adım 2 — Mapping JSON dosyasını seç
+              {t.restoreStep2[locale]}
             </p>
             <label
               className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-150
@@ -97,8 +100,8 @@ export default function DeanonymizePanel(props: Props) {
                 className={`text-sm ${deanonMapData ? 'text-green-400' : 'text-zinc-500'}`}
               >
                 {deanonMapData
-                  ? `✓ ${deanonMapData.originalFile} — ${Object.keys(deanonMapData.mapping).length} kayıt`
-                  : 'mapping_*.json dosyasını seç'}
+                  ? `\u2713 ${deanonMapData.originalFile} \u2014 ${Object.keys(deanonMapData.mapping).length} ${t.records[locale]}`
+                  : t.restoreStep2Hint[locale]}
               </span>
               <input
                 type="file"
@@ -117,23 +120,23 @@ export default function DeanonymizePanel(props: Props) {
             disabled={!deanonBuffer || !deanonMapData}
             className="self-start px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 shadow-lg shadow-blue-600/20"
           >
-            🔓 Geri Yükle & İndir
+            {t.restoreBtn[locale]}
           </button>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 p-8 bg-green-500/5 border border-green-500/20 rounded-2xl">
-          <span className="text-5xl">✅</span>
+          <span className="text-5xl">\u2705</span>
           <h2 className="text-lg font-semibold text-green-400">
-            Geri yükleme tamamlandı!
+            {t.restoreDoneTitle[locale]}
           </h2>
           <p className="text-sm text-zinc-400">
-            restored_{deanonFilename} indirildi.
+            {t.restoreDoneDesc[locale](deanonFilename)}
           </p>
           <button
             onClick={resetDeanon}
             className="px-5 py-2 text-sm font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-lg hover:bg-zinc-700 hover:text-white transition-all duration-150"
           >
-            ↩ Yeni Dosya
+            {t.newFile[locale]}
           </button>
         </div>
       )}
