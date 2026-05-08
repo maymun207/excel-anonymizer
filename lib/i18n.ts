@@ -119,6 +119,29 @@ export const translations = {
     tr: { none: 'YOK', PERSON: 'KİŞİ', ORG: 'FİRMA' } as const,
   },
 
+  // Privacy Banner
+  privacyTitle: { en: 'Private & Secure', tr: 'Gizli ve Güvenli' },
+  privacyDesc: {
+    en: 'Zero-upload architecture: All data processing happens locally in your browser. No data ever leaves your device.',
+    tr: 'Sıfır-yükleme mimarisi: Tüm veri işleme yerel olarak tarayıcınızda gerçekleşir. Verileriniz asla cihazınızdan çıkmaz.',
+  },
+
+  // How-to Guide
+  howToTitle: { en: 'Quick Start Guide', tr: 'Hızlı Kullanım Kılavuzu' },
+  step1Title: { en: '1. Select File', tr: '1. Dosya Seç' },
+  step1Desc: { en: 'Drop your .xlsx file here', tr: '.xlsx dosyasını yükleyin' },
+  step2Title: { en: '2. Auto-Scan', tr: '2. Otomatik Tara' },
+  step2Desc: { en: 'AI finds names and firms', tr: 'AI isimleri ve firmaları bulur' },
+  step3Title: { en: '3. Download', tr: '3. Güvenle İndir' },
+  step3Desc: { en: 'Get masked file & mapping', tr: 'Maskeli dosya ve haritayı al' },
+
+  // Open Source
+  openSourceBtn: { en: 'Open Source (Apache 2.0)', tr: 'Açık Kaynak (Apache 2.0)' },
+  openSourceNotice: {
+    en: 'This is an open-source tool. Feel free to audit the code on GitHub.',
+    tr: 'Bu açık kaynaklı bir araçtır. Kodları GitHub üzerinden inceleyebilirsiniz.',
+  },
+
   // Alerts / errors (used in hooks)
   aiScanError: { en: 'AI scan error', tr: 'AI tarama hatası' },
   anonymizeError: { en: 'Anonymization error', tr: 'Maskeleme hatası' },
